@@ -4,56 +4,69 @@ import { getResults, resultsToCSV, clearResults } from './ranking.js';
 
 /** Cria e baixa arquivo CSV */
 export function downloadCSV(){
-  const results = getResults();
-  if(!results || results.length === 0){
-    alert("Nenhum resultado registrado ainda.");
-    return;
-  }
-  const csv = resultsToCSV(results);
-  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  const now = new Date();
-  const fname = `sge_quiz_results_${now.toISOString().slice(0,19).replace(/[:T]/g,'_')}.csv`;
-  a.download = fname;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(url);
+    // 1. Obtém e verifica os resultados
+    const results = getResults();
+    if(!results || results.length === 0){
+        alert("Nenhum resultado registrado ainda.");
+        return;
+    }
+    
+    // 2. Converte os resultados para a string CSV
+    const csv = resultsToCSV(results);
+    
+    // 3. CRIA O BLOB COM CORREÇÃO DE CODIFICAÇÃO (BOM)
+    // O '\uFEFF' é o Byte Order Mark que garante que o Excel/Outros leitores 
+    // interpretem o CSV como UTF-8, resolvendo o problema de download/caracteres.
+    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' }); 
+    
+    // 4. Cria URL temporária para o Blob e configura o link de download
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    
+    // Gera nome de arquivo com timestamp
+    const now = new Date();
+    const fname = `sge_quiz_results_${now.toISOString().slice(0,19).replace(/[:T]/g,'_')}.csv`;
+    a.download = fname;
+    
+    // 5. Simula o clique para iniciar o download e limpa os elementos
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url); // Libera o recurso Blob/URL temporário
 }
 
 /** Renderiza um ranking simples (top 10) dentro de um container DOM */
 export function renderRanking(container){
-  const results = getResults()
-    .slice()
-    .sort((a,b) => b.percent - a.percent || a.timeMs - b.timeMs);
-  if(results.length === 0){
-    container.innerHTML = "<div class='small'>Nenhum resultado salvo.</div>";
-    return;
-  }
-  const top = results.slice(0,50);
-  let html = `<table class="table"><thead><tr><th>#</th><th>Nome</th><th>Pontos</th><th>%</th><th>Tempo (s)</th><th>Data</th></tr></thead><tbody>`;
-  top.forEach((r,i) => {
-    html += `<tr>
-      <td>${i+1}</td>
-      <td>${escapeHtml(r.name)}</td>
-      <td>${r.score}/${r.total}</td>
-      <td>${r.percent}%</td>
-      <td>${(r.timeMs/1000).toFixed(1)}</td>
-      <td>${new Date(r.dateISO).toLocaleString()}</td>
-    </tr>`;
-  });
-  html += `</tbody></table>`;
-  container.innerHTML = html;
+    const results = getResults()
+        .slice()
+        .sort((a,b) => b.percent - a.percent || a.timeMs - b.timeMs);
+    if(results.length === 0){
+        container.innerHTML = "<div class='small'>Nenhum resultado salvo.</div>";
+        return;
+    }
+    const top = results.slice(0,50);
+    let html = `<table class="table"><thead><tr><th>#</th><th>Nome</th><th>Pontos</th><th>%</th><th>Tempo (s)</th><th>Data</th></tr></thead><tbody>`;
+    top.forEach((r,i) => {
+        html += `<tr>
+            <td>${i+1}</td>
+            <td>${escapeHtml(r.name)}</td>
+            <td>${r.score}/${r.total}</td>
+            <td>${r.percent}%</td>
+            <td>${(r.timeMs/1000).toFixed(1)}</td>
+            <td>${new Date(r.dateISO).toLocaleString()}</td>
+        </tr>`;
+    });
+    html += `</tbody></table>`;
+    container.innerHTML = html;
 }
 
 /** Apaga todos os resultados (com confirmação) */
 export function handleClearAll(container){
-  if(!confirm("Apagar todos os resultados? Esta ação não pode ser desfeita.")) return;
-  clearResults();
-  renderRanking(container);
+    if(!confirm("Apagar todos os resultados? Esta ação não pode ser desfeita.")) return;
+    clearResults();
+    renderRanking(container);
 }
 
 /** util */
-function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c])); }
+function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]||c)); }
