@@ -1,0 +1,312 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Quiz SGE - Sistema de Gestão de Estoque (com Ranking e Relatório)</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="header">
+    <div>
+      <h1>Quiz SGE — Sistema de Gestão de Estoque</h1>
+      <div class="meta">60 questões • ranking local • export CSV</div>
+    </div>
+    <div style="text-align:right;">
+      <div class="small">Professora: use este dashboard para coletar resultados</div>
+    </div>
+  </div>
+
+  <div class="container">
+    <div class="card" id="setupCard">
+      <div style="display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap">
+        <div style="display:flex;gap:10px;align-items:center">
+          <input id="studentName" class="input" placeholder="Nome do aluno (ou grupo)" />
+          <button id="startBtn" class="btn">Iniciar Quiz</button>
+          <button id="resumeBtn" class="btn secondary" style="display:none">Retomar</button>
+        </div>
+        <div class="controls">
+          <div class="small">Questões: <strong id="totalCount">60</strong></div>
+          <div class="small">Modo: <strong>Misto</strong></div>
+          <div class="small">Tema: <strong>SENAI</strong></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card quiz-area" id="quizCard" style="display:none">
+      <div class="left">
+        <div class="progress"><div class="bar" id="bar"></div></div>
+        <div class="qno small" id="qno"></div>
+        <div class="qtext" id="qtext"></div>
+        <div class="options" id="options"></div>
+        <div class="status small" id="status"></div>
+        <div style="margin-top:12px;display:flex;gap:10px">
+          <button id="nextBtn" class="btn secondary" disabled>Próxima</button>
+          <button id="skipBtn" class="btn">Pular</button>
+        </div>
+      </div>
+
+      <div class="right">
+        <div class="scorebox">
+          <div class="small">Aluno</div>
+          <div style="font-weight:700" id="displayName">—</div>
+          <hr style="margin:8px 0">
+          <div class="small">Pontuação</div>
+          <div style="font-size:1.4rem;font-weight:700" id="score">0</div>
+          <div class="small" id="progressText">0 / 60</div>
+          <hr style="margin:8px 0">
+          <div class="small">Tempo</div>
+          <div id="timer" style="font-weight:700">00:00</div>
+        </div>
+
+        <div style="margin-top:12px" class="card">
+          <div style="display:flex;gap:8px;align-items:center;justify-content:space-between">
+            <div style="font-weight:700">Ranking Local</div>
+            <div class="small">Atualize após cada aluno</div>
+          </div>
+          <div id="rankingContainer" style="margin-top:8px"></div>
+          <div style="display:flex;gap:8px;margin-top:8px">
+            <button id="refreshRanking" class="btn secondary">Atualizar Ranking</button>
+            <button id="exportCSV" class="btn">Exportar CSV</button>
+            <button id="clearAll" class="btn secondary">Limpar</button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="card" id="finalCard" style="display:none">
+      <h2>Resumo do Resultado</h2>
+      <div id="finalSummary"></div>
+      <div style="margin-top:12px">
+        <button id="saveResultBtn" class="btn">Salvar Resultado (Ranking)</button>
+        <button id="newAttempt" class="btn secondary">Novo Aluno</button>
+      </div>
+      <div id="detailedReview" style="margin-top:12px"></div>
+    </div>
+  </div>
+
+  <div class="footer">Base: "ATIVIDADE DE REVISÃO DO CURSO TÉCNICO EM DESENVOLVIMENTO DE SISTEMAS - 2025"</div>
+
+  <script type="module">
+  import { QUESTIONS } from './perguntas.js';
+  import { saveResult, getResults } from './ranking.js';
+  import { renderRanking, downloadCSV, handleClearAll } from './relatorio.js';
+
+  // Elements
+  const startBtn = document.getElementById('startBtn');
+  const resumeBtn = document.getElementById('resumeBtn');
+  const studentName = document.getElementById('studentName');
+  const quizCard = document.getElementById('quizCard');
+  const setupCard = document.getElementById('setupCard');
+  const qno = document.getElementById('qno');
+  const qtext = document.getElementById('qtext');
+  const optionsEl = document.getElementById('options');
+  const bar = document.getElementById('bar');
+  const nextBtn = document.getElementById('nextBtn');
+  const skipBtn = document.getElementById('skipBtn');
+  const status = document.getElementById('status');
+  const displayName = document.getElementById('displayName');
+  const scoreEl = document.getElementById('score');
+  const progressText = document.getElementById('progressText');
+  const timerEl = document.getElementById('timer');
+  const totalCount = document.getElementById('totalCount');
+  const rankingContainer = document.getElementById('rankingContainer');
+  const refreshRanking = document.getElementById('refreshRanking');
+  const exportCSV = document.getElementById('exportCSV');
+  const clearAll = document.getElementById('clearAll');
+
+  const finalCard = document.getElementById('finalCard');
+  const finalSummary = document.getElementById('finalSummary');
+  const saveResultBtn = document.getElementById('saveResultBtn');
+  const newAttempt = document.getElementById('newAttempt');
+  const detailedReview = document.getElementById('detailedReview');
+
+  totalCount.textContent = QUESTIONS.length;
+
+  // State
+  let currentIndex = 0;
+  let score = 0;
+  let userAnswers = Array(QUESTIONS.length).fill(null);
+  let startTime = null;
+  let timerInterval = null;
+  let name = '';
+
+  function formatTime(ms){
+    const s = Math.floor(ms/1000);
+    const mm = String(Math.floor(s/60)).padStart(2,'0');
+    const ss = String(s%60).padStart(2,'0');
+    return `${mm}:${ss}`;
+  }
+
+  function startTimer(){
+    startTime = Date.now();
+    timerInterval = setInterval(()=> {
+      timerEl.textContent = formatTime(Date.now() - startTime);
+    }, 500);
+  }
+
+  function stopTimer(){
+    if(timerInterval) clearInterval(timerInterval);
+  }
+
+  function renderQuestion(i){
+    const q = QUESTIONS[i];
+    qno.textContent = `Questão ${i+1} de ${QUESTIONS.length}`;
+    qtext.textContent = q.q;
+    optionsEl.innerHTML = '';
+    q.options.forEach((opt, idx) => {
+      const div = document.createElement('div');
+      div.className = 'opt';
+      div.tabIndex = 0;
+      div.textContent = `${String.fromCharCode(65+idx)}. ${opt}`;
+      div.onclick = () => selectOption(idx);
+      div.onkeydown = (e) => { if(e.key === 'Enter') selectOption(idx); }
+      optionsEl.appendChild(div);
+    });
+    bar.style.width = `${Math.round((i/QUESTIONS.length)*100)}%`;
+    nextBtn.disabled = true;
+    skipBtn.disabled = false;
+    status.textContent = '';
+    progressText.textContent = `${score} / ${QUESTIONS.length}`;
+  }
+
+  function selectOption(idx){
+    if(userAnswers[currentIndex] !== null) return; // já respondida
+    const q = QUESTIONS[currentIndex];
+    const opts = document.querySelectorAll('.opt');
+    const correct = q.answer;
+    opts.forEach((o, i) => {
+      o.onclick = null;
+      o.onkeydown = null;
+      if(i === correct) o.classList.add('correct');
+      if(i === idx && i !== correct) o.classList.add('wrong');
+    });
+    userAnswers[currentIndex] = idx;
+    if(idx === correct){
+      score++;
+      status.innerHTML = `<strong>Correto</strong> — ${q.explanation || ''}`;
+    } else {
+      status.innerHTML = `<strong>Errado</strong> — ${q.explanation || ''}`;
+    }
+    scoreEl.textContent = score;
+    nextBtn.disabled = false;
+    skipBtn.disabled = true;
+  }
+
+  nextBtn.onclick = () => {
+    currentIndex++;
+    if(currentIndex >= QUESTIONS.length){
+      finishAttempt();
+    } else {
+      renderQuestion(currentIndex);
+    }
+  };
+
+  skipBtn.onclick = () => {
+    // registra nulo e avança
+    userAnswers[currentIndex] = null;
+    currentIndex++;
+    if(currentIndex >= QUESTIONS.length){
+      finishAttempt();
+    } else {
+      renderQuestion(currentIndex);
+    }
+  };
+
+  startBtn.onclick = () => {
+    name = (studentName.value || "").trim();
+    if(!name){
+      alert("Informe o nome do aluno ou grupo.");
+      studentName.focus();
+      return;
+    }
+    displayName.textContent = name;
+    setupCard.style.display = 'none';
+    quizCard.style.display = 'flex';
+    renderQuestion(0);
+    startTimer();
+    refreshRanking.click();
+  };
+
+  function finishAttempt(){
+    stopTimer();
+    quizCard.style.display = 'none';
+    finalCard.style.display = 'block';
+    const timeMs = Date.now() - startTime;
+    const percent = Math.round((score / QUESTIONS.length) * 100);
+    finalSummary.innerHTML = `
+      <div class="small">Aluno</div><div style="font-weight:700">${name}</div>
+      <div style="margin-top:8px" class="small">Pontuação</div><div style="font-weight:700">${score} / ${QUESTIONS.length} (${percent}%)</div>
+      <div style="margin-top:8px" class="small">Tempo</div><div style="font-weight:700">${formatTime(timeMs)}</div>
+    `;
+    // build detailed review
+    let html = `<h3>Revisão por questão</h3><table class="table"><thead><tr><th>#</th><th>Pergunta</th><th>Sua resposta</th><th>Certa</th><th>Comentário</th></tr></thead><tbody>`;
+    QUESTIONS.forEach((q, idx) => {
+      const ua = userAnswers[idx];
+      const uaText = ua === null ? '<em>Não respondida</em>' : `${String.fromCharCode(65+ua)}. ${escapeHtml(q.options[ua])}`;
+      const correctText = `${String.fromCharCode(65+q.answer)}. ${escapeHtml(q.options[q.answer])}`;
+      html += `<tr>
+        <td>${idx+1}</td>
+        <td style="max-width:420px">${escapeHtml(q.q)}</td>
+        <td>${uaText}</td>
+        <td>${correctText}</td>
+        <td>${escapeHtml(q.explanation || '')}</td>
+      </tr>`;
+    });
+    html += `</tbody></table>`;
+    detailedReview.innerHTML = html;
+
+    // prepare result object to save if teacher wants
+    window._lastResult = {
+      name,
+      score,
+      total: QUESTIONS.length,
+      percent,
+      timeMs,
+      dateISO: new Date().toISOString(),
+      details: QUESTIONS.map((q, idx) => ({ id:q.id, answerIndex: userAnswers[idx], correctIndex: q.answer }))
+    };
+  }
+
+  saveResultBtn.onclick = () => {
+    if(!window._lastResult){
+      alert("Não há resultado a salvar.");
+      return;
+    }
+    saveResult(window._lastResult);
+    alert("Resultado salvo no ranking local.");
+    // atualizar ranking UI
+    refreshRanking.click();
+  };
+
+  newAttempt.onclick = () => {
+    // resetar
+    currentIndex = 0;
+    score = 0;
+    userAnswers = Array(QUESTIONS.length).fill(null);
+    startTime = null;
+    timerEl.textContent = "00:00";
+    finalCard.style.display = 'none';
+    setupCard.style.display = 'block';
+    studentName.value = "";
+    displayName.textContent = "—";
+    scoreEl.textContent = "0";
+  };
+
+  // Ranking controls
+  refreshRanking.onclick = () => {
+    renderRanking(rankingContainer);
+  };
+  exportCSV.onclick = () => {
+    downloadCSV();
+  };
+  clearAll.onclick = () => {
+    handleClearAll(rankingContainer);
+  };
+
+  // small helpers
+  function escapeHtml(s){ if(s==null) return ""; return String(s).replace(/[&<>"']/g, c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c])); }
+  </script>
+</body>
+</html>

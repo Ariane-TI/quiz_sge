@@ -1,0 +1,99 @@
+/* style.css - Tema SENAI / Limpo */
+:root{
+  --primary:#cc0000;
+  --primary-dark:#a30000;
+  --accent:#06b6d4;
+  --success:#16a34a;
+  --danger:#ef4444;
+  --bg:#f4f6f8;
+  --card:#ffffff;
+  --muted:#64748b;
+  font-family: "Segoe UI", Roboto, Arial, sans-serif;
+}
+*{box-sizing:border-box}
+body{
+  margin:0;
+  background:var(--bg);
+  color:#0f172a;
+  -webkit-font-smoothing:antialiased;
+  -moz-osx-font-smoothing:grayscale;
+}
+.header{
+  background:linear-gradient(90deg,var(--primary),#e60000);
+  color:#fff;
+  padding:18px 24px;
+  display:flex;
+  align-items:center;
+  gap:16px;
+  justify-content:space-between;
+}
+.header h1{margin:0;font-size:1.05rem}
+.header .meta{font-size:0.95rem;opacity:0.95}
+.container{
+  max-width:1100px;
+  margin:22px auto;
+  padding:20px;
+}
+.card{
+  background:var(--card);
+  border-radius:12px;
+  box-shadow:0 8px 30px rgba(2,6,23,0.06);
+  padding:18px;
+  margin-bottom:18px;
+}
+.controls{
+  display:flex;
+  gap:10px;
+  align-items:center;
+  flex-wrap:wrap;
+}
+.input{
+  padding:10px 12px;
+  border-radius:8px;
+  border:1px solid #e6eef5;
+  width:260px;
+}
+.btn{
+  padding:10px 14px;
+  border-radius:8px;
+  border:0;
+  cursor:pointer;
+  background:var(--primary);
+  color:#fff;
+}
+.btn.secondary{background:#64748b}
+.quiz-area{display:flex;gap:18px;align-items:flex-start}
+.left{flex:1}
+.right{width:320px}
+.progress{
+  height:12px;
+  background:#eef4f7;
+  border-radius:999px;
+  overflow:hidden;
+  margin-bottom:12px;
+}
+.bar{height:100%;width:0;background:var(--accent);transition:width .3s}
+.qno{font-weight:700;color:var(--muted);margin-bottom:6px}
+.qtext{font-size:1.15rem;margin-bottom:12px}
+.options{display:grid;gap:10px}
+.opt{
+  padding:12px;
+  border-radius:10px;
+  border:1px solid #e6eef5;
+  background:#fff;
+  cursor:pointer;
+  transition:all .12s;
+}
+.opt:hover{transform:translateY(-3px);box-shadow:0 6px 18px rgba(2,6,23,0.04)}
+.opt.correct{border-color:var(--success);background:#ecfdf5}
+.opt.wrong{border-color:var(--danger);background:#fff1f2}
+.status{padding:10px;border-radius:8px;margin-top:8px}
+.small{font-size:0.94rem;color:var(--muted)}
+.scorebox{background:#fff;padding:12px;border-radius:10px;border:1px solid #eef4f7}
+.table{width:100%;border-collapse:collapse;margin-top:10px}
+.table th,.table td{padding:8px;border:1px solid #eef4f7;text-align:left;font-size:0.95rem}
+.footer{font-size:0.9rem;color:var(--muted);text-align:center;padding:12px 0}
+@media (max-width:880px){
+  .quiz-area{flex-direction:column}
+  .right{width:100%}
+}
