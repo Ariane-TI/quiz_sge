@@ -4,7 +4,7 @@
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>Quiz SGE - Sistema de Gestão de Estoque (com Ranking e Relatório)</title>
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="estilo.css">
 </head>
 <body>
   <div class="header">
@@ -89,7 +89,7 @@
   <div class="footer">Base: "ATIVIDADE DE REVISÃO DO CURSO TÉCNICO EM DESENVOLVIMENTO DE SISTEMAS - 2025"</div>
 
   <script type="module">
-  import { QUESTIONS } from './perguntas.js';
+  import { QUESTIONS } from './pergunta.js';
   import { saveResult, getResults } from './ranking.js';
   import { renderRanking, downloadCSV, handleClearAll } from './relatorio.js';
 
@@ -310,4 +310,5 @@
   </script>
 </body>
 </html>
+
 
